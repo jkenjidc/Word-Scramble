@@ -15,6 +15,7 @@ class ViewController: UITableViewController {
         super.viewDidLoad()
         
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(promptForAnswer))
+        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .refresh, target: self, action: #selector(startGame))
         
         if let startWordUrl = Bundle.main.url(forResource: "start", withExtension: "txt"){
             if let startWords = try? String(contentsOf: startWordUrl) {
@@ -28,7 +29,7 @@ class ViewController: UITableViewController {
         startGame()
     }
     
-    func startGame(){
+    @objc func startGame(){
         title = allWords.randomElement()
         usedWords.removeAll(keepingCapacity: true)
         tableView.reloadData()
@@ -61,35 +62,33 @@ class ViewController: UITableViewController {
     func submit (_ answer: String){
         let lowerAnswer = answer.lowercased()
         
-        let errorTitle: String
-        let errorMessage: String
         
         if isPossible(word: lowerAnswer){
             if isOriginal(word: lowerAnswer){
                 if isReal(word: lowerAnswer){
-                    usedWords.insert(lowerAnswer, at: 0)
-                    
-                    let indexPath = IndexPath(row: 0, section: 0)
-                    tableView.insertRows(at: [indexPath], with: .automatic)
-                    
-                    return
+                    if isLongEnough(word: lowerAnswer){
+                        if isNotTitle(word: lowerAnswer){
+                            usedWords.insert(lowerAnswer, at: 0)
+                            
+                            let indexPath = IndexPath(row: 0, section: 0)
+                            tableView.insertRows(at: [indexPath], with: .automatic)
+                            
+                            return
+                        } else{
+                            showErrorMessage("notTitle")
+                        }
+                    } else {
+                        showErrorMessage("notLongEnough")
+                    }
                 } else {
-                    errorTitle = "Word not recognized"
-                    errorMessage = "Enter a valid english word"
+                    showErrorMessage("notReal")
                 }
             }else {
-                errorTitle = "Word already used"
-                errorMessage = "already submitted that word"
+                showErrorMessage("notOriginal")
             }
         }else{
-            guard let title = title else { return }
-            errorTitle = "Word not possible"
-            errorMessage = "You can't spell that word from \(title.lowercased())."
+            showErrorMessage("notPossible")
         }
-        
-        let ac = UIAlertController(title: errorTitle, message: errorMessage, preferredStyle: .alert)
-        ac.addAction(UIAlertAction(title: "OK", style: .default))
-        present(ac, animated: true)
     }
     
     func isPossible(word: String) -> Bool {
@@ -117,7 +116,43 @@ class ViewController: UITableViewController {
         return misspelledRange.location == NSNotFound
     }
     
+    func isLongEnough(word: String) -> Bool {
+        return word.count >= 3
+    }
     
+    func isNotTitle(word: String) -> Bool {
+        return !(title == word)
+    }
+    
+    func showErrorMessage(_ errorType: String){
+        let errorTitle: String
+        let errorMessage: String
+        switch errorType{
+        case "notPossible":
+            guard let title = title else { return }
+            errorTitle = "Word not possible"
+            errorMessage = "You can't spell that word from \(title.lowercased())."
+        case "notOriginal":
+            errorTitle = "Word already used"
+            errorMessage = "already submitted that word"
+        case "notReal":
+            errorTitle = "Word not recognized"
+            errorMessage = "Enter a valid english word"
+        case "notLongEnough":
+            errorTitle = "Word is too short"
+            errorMessage = "Enter a word with more than 2 letters"
+        case "notTitle":
+            errorTitle = "Can't use main word"
+            errorMessage = "Use a word that is not just the title itself"
+        default:
+            errorTitle = "Unrecognized Error"
+            errorMessage = "not recognized error"
+        }
+        let ac = UIAlertController(title: errorTitle, message: errorMessage, preferredStyle: .alert)
+        ac.addAction(UIAlertAction(title: "OK", style: .default))
+        present(ac, animated: true)
+        
+    }
 
 
 }
