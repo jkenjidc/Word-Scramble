@@ -10,12 +10,13 @@ import UIKit
 class ViewController: UITableViewController {
     var allWords = [String]()
     var usedWords = [String]()
+    let defaults = UserDefaults.standard
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(promptForAnswer))
-        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .refresh, target: self, action: #selector(startGame))
+        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .refresh, target: self, action: #selector(restartGame))
         
         if let startWordUrl = Bundle.main.url(forResource: "start", withExtension: "txt"){
             if let startWords = try? String(contentsOf: startWordUrl) {
@@ -29,9 +30,26 @@ class ViewController: UITableViewController {
         startGame()
     }
     
-    @objc func startGame(){
+    @objc func restartGame(){
         title = allWords.randomElement()
+        defaults.set(title, forKey: "title")
         usedWords.removeAll(keepingCapacity: true)
+        tableView.reloadData()
+    }
+    
+    @objc func startGame(){
+        if defaults.object(forKey: "title") == nil {
+            title = allWords.randomElement()
+            defaults.set(title, forKey: "title")
+        } else {
+            title = defaults.object(forKey: "title") as? String
+        }
+        
+        if defaults.object(forKey: "usedWords") == nil {
+            usedWords.removeAll(keepingCapacity: true)
+        }else {
+            usedWords = defaults.object(forKey: "usedWords") as? [String] ?? [String]()
+        }
         tableView.reloadData()
     }
     
@@ -69,6 +87,7 @@ class ViewController: UITableViewController {
                     if isLongEnough(word: lowerAnswer){
                         if isNotTitle(word: lowerAnswer){
                             usedWords.insert(lowerAnswer, at: 0)
+                            defaults.set(usedWords, forKey: "usedWords")
                             
                             let indexPath = IndexPath(row: 0, section: 0)
                             tableView.insertRows(at: [indexPath], with: .automatic)
